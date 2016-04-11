@@ -52,7 +52,7 @@ var menuTempl = function(webviews) {
         ]
     });
 
-      // ACCOUNTS
+    // ACCOUNTS
     menu.push({
         label: i18n.t('mist.applicationMenu.accounts.label'),
         submenu: [
@@ -273,7 +273,7 @@ var menuTempl = function(webviews) {
                 }
               },
               {
-                label: 'Eth 1.2.1 (C++) [experimental!]',
+                label: 'Eth 1.2.3 (C++) [experimental!]',
                 checked: !!global.nodes.eth,
                 enabled: !!((global.nodes.geth || global.nodes.eth) && !global.nodes.eth),
                 type: 'checkbox',
