@@ -25,6 +25,8 @@ mistInit = function(){
         }
 
         if(!Tabs.findOne('browser')) {
+            console.debug('Insert tabs');
+
             Tabs.insert({
                 _id: 'browser',
                 url: 'https://ethereum.org',
@@ -56,8 +58,10 @@ Meteor.startup(function(){
     });
 
 
+    console.debug('Setting language');
+
     // SET default language
-    if(Cookie.get('TAPi18next')) {
+    if(Cookie.get('TAPi18next')) {        
         TAPi18n.setLanguage(Cookie.get('TAPi18next'));
     } else {
         var userLang = navigator.language || navigator.userLanguage,
