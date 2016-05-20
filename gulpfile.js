@@ -7,6 +7,7 @@ var packager = require('electron-packager');
 var spawn = require('child_process').spawn;
 var merge = require('merge-stream');
 var rename = require("gulp-rename");
+// const zip = require('gulp-zip');
 // var zip = require('gulp-zip');
 // var zip = require('gulp-jszip');
 var EasyZip = require('easy-zip').EasyZip;
@@ -35,7 +36,7 @@ var filenameLowercase = 'mist';
 var filenameUppercase = 'Mist';
 var applicationName = 'Mist'; 
 
-var electronVersion = '0.37.2';
+var electronVersion = '1.0.1';
 var osVersions = [];
 var packJson = require('./package.json');
 var version = packJson.version;

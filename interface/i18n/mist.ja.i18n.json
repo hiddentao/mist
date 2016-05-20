@@ -4,6 +4,9 @@
             "app": {
                 "label": "__app__",
                 "about": "__app__ について",
+                "hide": "__app__ を隠す",
+                "hideOthers": "ほかを隠す",
+                "showAll": "すべてを表示",
                 "quit": " __app__ を中止する"
             },
             "edit": {
@@ -93,7 +96,7 @@
             "nodeSyncInfo": "blockをダウンロードしています。 __currentBlock__ of __highestBlock__.",
             "nodeSyncConnecting": "ピアーを探しています。...",
             "nodeSyncProcessing": "ブロックを処理しています...",
-            "privateChainTimeout": "ピアーの検索を中止しています"
+            "peerSearchTimeout": "ピアーの検索を中止しています"
         },
         "popupWindows": {
             "requestAccount": {

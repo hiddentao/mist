@@ -4,6 +4,9 @@
             "app": {
                 "label": "__app__",
                 "about": "关于__app__",
+                "hide": "隐藏 __app__",
+                "hideOthers": "隐藏 其它",
+                "showAll": "显示 全部",
                 "quit": "退出__app__"
             },
             "edit": {
@@ -95,7 +98,7 @@
             "nodeSyncInfo": "正在下载第__currentBlock__块，共__highestBlock__。",
             "nodeSyncConnecting": "正在查找节点……",
             "nodeSyncProcessing": "正在处理区块，请等待……",
-            "privateChainTimeout": "跳过节点搜索"
+            "peerSearchTimeout": "跳过节点搜索"
         },
         "popupWindows": {
             "requestAccount": {
