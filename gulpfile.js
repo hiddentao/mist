@@ -1,3 +1,5 @@
+"use strict";
+
 var _ = require("underscore");
 var gulp = require('gulp');
 var exec = require('child_process').exec;
@@ -15,11 +17,13 @@ var minimist = require('minimist');
 var fs = require('fs');
 var rcedit = require('rcedit');
 
+
+
 var options = minimist(process.argv.slice(2), {
     string: ['platform','walletSource'],
     default: {
         platform: 'all',
-        walletSource: 'master'
+        walletSource: 'master',
     }
 });
 
@@ -37,7 +41,7 @@ var filenameUppercase = 'Mist';
 var applicationName = 'Mist'; 
 
 var electronVersion = '1.0.1';
-var osVersions = [];
+var targetPlatforms = [];
 var packJson = require('./package.json');
 var version = packJson.version;
 
@@ -46,45 +50,40 @@ console.log('You can select a platform like: --platform (all or darwin or win32 
 console.log('Mist version:', version);
 console.log('Electron version:', electronVersion);
 
-if(_.contains(options.platform, 'win32')) {
-    osVersions.push('win32-ia32');
-    osVersions.push('win32-x64');
-}
+const supportedPlatforms = {
+    'win32': ['ia32', 'x64'],
+    'linux': ['ia32', 'x64'],
+    'darwin': ['x64'],
+};
 
-if(_.contains(options.platform, 'linux')) {
-    osVersions.push('linux-ia32');
-    osVersions.push('linux-x64');
-}
+_.keys(supportedPlatforms).forEach((platform) => {
+    if (_.contains(options.platform, 'all') || _.contains(options.platform, platform)) {
+        targetPlatforms.push(platform);
+    }
+});
 
-if(_.contains(options.platform, 'darwin')) {
-    osVersions.push('darwin-x64');
-}
 
-if(_.contains(options.platform, 'all')) {
-    osVersions = [
-        'darwin-x64',
-        // 'linux-arm',
-        'linux-ia32',
-        'linux-x64',
-        'win32-ia32',
-        'win32-x64'
-    ];
-}
-console.log('Bundling platforms: ', osVersions);
+console.log('Bundling platforms: ' + targetPlatforms.join(", "));
 
 
 // Helpers
-var createNewFileName = function(os) {
+var createNewFileName = function(platform, arch) {
     var newOs;
-    if(os.indexOf('win32') !== -1) {
-        newOs = os.replace('win32-ia32','win32').replace('win32-x64','win64');
+
+    switch (platform) {
+        case 'win32':
+            newOs = ('ia32' === arch) ? 'win32' : 'win64';
+            break;
+        case 'linux':
+            newOs = ('ia32' === arch) ? 'linux32' : 'linux64';
+            break;
+        case 'darwin':
+            newOs = 'macosx';
+            break;
+        default:
+            throw new Error(`Unsupported platform: ${platform}`);
     }
-    if(os.indexOf('darwin') !== -1) {
-        newOs = 'macosx';
-    }
-    if(os.indexOf('linux') !== -1) {
-        newOs = os.replace('linux-x64','linux64').replace('linux-ia32','linux32');
-    }
+
     return './dist_'+ type +'/'+ filenameUppercase +'-'+ newOs + '-'+ version.replace(/\./g,'-');
 };
 
@@ -191,7 +190,7 @@ gulp.task('create-binaries', ['copy-i18n'], function(cb) {
         dir: './dist_'+ type +'/app/',
         out: './dist_'+ type +'/',
         name: filenameUppercase,
-        platform: options.platform.join(','),
+        platform: targetPlatforms.join(','),
         arch: 'all',
         icon: './icons/'+ type +'/icon.icns',
         version: electronVersion,
@@ -227,57 +226,60 @@ gulp.task('create-binaries', ['copy-i18n'], function(cb) {
 gulp.task('change-files', ['create-binaries'], function() {
     var streams = [];
 
-    osVersions.map(function(os){
-        var stream,
-            path = './dist_'+ type +'/'+ filenameUppercase +'-'+ os;
+    targetPlatforms.forEach((platform) => {
+        supportedPlatforms[platform].forEach((arch) => {
+            let platformArch = `${platform}-${arch}`;
 
-        // change version file
-        streams.push(gulp.src([
-            path +'/version'
-            ])
-            .pipe(replace(electronVersion, version))
-            .pipe(gulp.dest(path +'/')));
+            var stream,
+                path = './dist_'+ type +'/'+ filenameUppercase +'-'+ platformArch;
 
-        // copy license file
-        streams.push(gulp.src([
-            './LICENSE'
-            ])
-            .pipe(gulp.dest(path +'/')));
+            // change version file
+            streams.push(gulp.src([
+                path +'/version'
+                ])
+                .pipe(replace(electronVersion, version))
+                .pipe(gulp.dest(path +'/')));
 
-
-        // copy authors file
-        streams.push(gulp.src([
-            './AUTHORS'
-            ])
-            .pipe(gulp.dest(path +'/')));
-
-        // copy and rename readme
-        streams.push(gulp.src([
-            './Wallet-README.txt'
-            ], { base: './' })
-            .pipe(rename(function (path) {
-                path.basename = "README";
-            }))
-            .pipe(gulp.dest(path + '/')));
-
-        var destPath = (os === 'darwin-x64')
-            ? path +'/'+ filenameUppercase +'.app/Contents/Frameworks/node'
-            : path +'/resources/node';
+            // copy license file
+            streams.push(gulp.src([
+                './LICENSE'
+                ])
+                .pipe(gulp.dest(path +'/')));
 
 
+            // copy authors file
+            streams.push(gulp.src([
+                './AUTHORS'
+                ])
+                .pipe(gulp.dest(path +'/')));
 
-        // copy eth node binaries
-        streams.push(gulp.src([
-            './nodes/eth/'+ os + '/*'
-            ])
-            .pipe(gulp.dest(destPath +'/eth')));
+            // copy and rename readme
+            streams.push(gulp.src([
+                './Wallet-README.txt'
+                ], { base: './' })
+                .pipe(rename(function (path) {
+                    path.basename = "README";
+                }))
+                .pipe(gulp.dest(path + '/')));
 
-        // copy geth node binaries
-        streams.push(gulp.src([
-            './nodes/geth/'+ os + '/*'
-            ])
-            .pipe(gulp.dest(destPath +'/geth')));
+            var destPath = (platformArch === 'darwin-x64')
+                ? path +'/'+ filenameUppercase +'.app/Contents/Frameworks/node'
+                : path +'/resources/node';
 
+
+
+            // copy eth node binaries
+            streams.push(gulp.src([
+                './nodes/eth/'+ platformArch + '/*'
+                ])
+                .pipe(gulp.dest(destPath +'/eth')));
+
+            // copy geth node binaries
+            streams.push(gulp.src([
+                './nodes/geth/'+ platformArch + '/*'
+                ])
+                .pipe(gulp.dest(destPath +'/geth')));
+        });
     });
 
 
@@ -293,91 +295,69 @@ gulp.task('change-files', ['create-binaries'], function() {
 gulp.task('rename-folders', ['change-files'], function(done) {
     var count = 0;
     var called = false;
-    osVersions.forEach(function(os){
 
-        var path = createNewFileName(os);
+    targetPlatforms.forEach((platform) => {
+        supportedPlatforms[platform].forEach((arch) => {
+            let platformArch = `${platform}-${arch}`;
 
-        fs.renameSync('./dist_'+ type +'/'+ filenameUppercase +'-'+ os, path);
+            var path = createNewFileName(platform, arch);
 
-        // change icon on windows
-        if(os.indexOf('win32') !== -1) {
-            rcedit(path +'/'+ filenameUppercase +'.exe', {
-                'file-version': version,
-                'product-version': version,
-                'icon': './icons/'+ type +'/icon.ico'
-            }, function(){
-                if(!called && osVersions.length === count) {
-                    done();
-                    called = true;
-                }
-            });
-        }
+            fs.renameSync('./dist_'+ type +'/'+ filenameUppercase +'-'+ platformArch, path);
 
+            // change icon on windows
+            if('win32' === platform) {
+                rcedit(path +'/'+ filenameUppercase +'.exe', {
+                    'file-version': version,
+                    'product-version': version,
+                    'icon': './icons/'+ type +'/icon.ico'
+                }, function(){
+                    if(!called && targetPlatforms.length === count) {
+                        done();
+                        called = true;
+                    }
+                });
+            }
 
-        //var zip5 = new EasyZip();
-        //zip5.zipFolder(path, function(){
-        //    zip5.writeToFile(path +'.zip'); 
-        //});
+            count++;
 
-
-        count++;
-
-        if(!called && osVersions.length === count) {
-            done();
-            called = true;
-        }
+            if(!called && targetPlatforms.length === count) {
+                done();
+                called = true;
+            }
+        });
     });
 });
 
-
-gulp.task('zip', ['rename-folders'], function () {
-    var streams = osVersions.map(function(os){
-        var stream,
-            name = filenameUppercase +'-'+ os +'-'+ version.replace(/\./g,'-');
-
-        // TODO doesnt work!!!!!
-        stream = gulp.src([
-            './dist_'+ type +'/'+ name + '/**/*'
-            ])
-            .pipe(zip({
-                name: name + ".zip",
-                outpath: './dist_'+ type +'/'
-            }));
-            // .pipe(zip(name +'.zip'))
-            // .pipe(gulp.dest('./dist_'+ type +'/'));
-
-        return stream;
-    });
-
-
-    return merge.apply(null, streams);
-});
 
 
 
 gulp.task('getChecksums', [], function(done) {
     var count = 0;
-    osVersions.forEach(function(os){
 
-        var path = createNewFileName(os) + '.zip';
+    targetPlatforms.forEach((platform) => {
+        supportedPlatforms[platform].forEach((arch) => {
+            let platformArch = `${platform}-${arch}`;
 
-        // spit out shasum and md5
-        var fileName = path.replace('./dist_'+ type +'/', '');
-        var sha = spawn('shasum', [path]);
-        sha.stdout.on('data', function(data){
-            console.log('SHASUM '+ fileName +': '+ data.toString().replace(path, ''));
+            var path = createNewFileName(platform, arch) + '.zip';
+
+            // spit out shasum and md5
+            var fileName = path.replace('./dist_'+ type +'/', '');
+            var sha = spawn('shasum', [path]);
+            sha.stdout.on('data', function(data){
+                console.log('SHASUM '+ fileName +': '+ data.toString().replace(path, ''));
+            });
+            var md5 = spawn('md5', [path]);
+            md5.stdout.on('data', function(data){
+                console.log('MD5 '+ fileName +': '+ data.toString().replace('MD5 ('+ path +') = ', ''));
+            });
+
+            count++;
+            if(targetPlatforms.length === count) {
+                done();
+            }
         });
-        var md5 = spawn('md5', [path]);
-        md5.stdout.on('data', function(data){
-            console.log('MD5 '+ fileName +': '+ data.toString().replace('MD5 ('+ path +') = ', ''));
-        });
-
-
-        count++;
-        if(osVersions.length === count) {
-            done();
-        }
     });
+
 });
 
 
